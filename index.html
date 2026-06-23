@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>🔬 ChemLab 3D | Realistic Titration Lab & Quiz</title>
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --panel: #141b22;
+      --border: #2a3544;
+      --text: #d0d8e4;
+      --accent: #4da6ff;
+      --acid: #ff4757;
+      --base: #7c5ce7;
+      --neutral: #2ed573;
+      --warning: #ffa502;
+      --glass: rgba(20, 28, 38, 0.9);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: var(--text);
+      overflow-x: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .header {
+      background: #1a2332;
+      border-bottom: 2px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      z-index: 10;
+    }
+    .logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+      background: linear-gradient(135deg, #4da6ff, #7c5ce7, #ff4757);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .nav-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--glass);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: 0.2s;
+      white-space: nowrap;
+    }
+    .btn:hover { border-color: #5a7aaa; box-shadow: 0 0 18px rgba(77,166,255,0.2); transform: translateY(-1px); }
+    .btn.active-btn { background: #1a3a5c; border-color: var(--accent); color: #fff; }
+    .btn.quiz-btn { background: #2d1a2d; border-color: #c084fc; color: #e2b8ff; }
+    .btn.sound-btn { background: #1a1a2d; border-color: #7c5ce7; color: #b39dff; }
+    .btn.record-btn { background: #2d1a1a; border-color: #ff4757; color: #ff6b7a; }
+    .btn.download-btn { background: #1a2d1a; border-color: #2ed573; color: #5dff9e; }
+    .btn.reset-btn { background: #2d251a; border-color: #ffa502; color: #ffbe4d; }
+
+    .main-container {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 130px);
+      flex-wrap: wrap;
+    }
+    .scene-panel {
+      flex: 1 1 55%;
+      min-width: 400px;
+      min-height: 450px;
+      position: relative;
+      background: radial-gradient(ellipse at center, #111922 0%, #080c14 100%);
+      border-right: 2px solid var(--border);
+      cursor: grab;
+      overflow: hidden;
+    }
+    .scene-panel:active { cursor: grabbing; }
+    .ph-display {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(0,0,0,0.7);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 12px 18px;
+      text-align: center;
+      pointer-events: none;
+      backdrop-filter: blur(6px);
+    }
+    .ph-value { font-size: 2.8rem; font-weight: 900; letter-spacing: 2px; transition: color 0.4s; }
+    .ph-label { font-size: 0.65rem; color: #8899aa; }
+
+    .control-panel {
+      flex: 0 0 420px;
+      background: var(--panel);
+      padding: 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-left: 2px solid var(--border);
+    }
+    .control-group {
+      background: var(--glass);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+    }
+    .control-group h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.2px; color: #8899aa; margin-bottom: 8px; }
+    label { display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 600; color: #bcc8d6; margin-bottom: 4px; }
+    select, input[type=range] { width: 100%; margin: 4px 0 8px; }
+    select { background: #1a2332; border: 1px solid var(--border); color: var(--text); padding: 8px; border-radius: 6px; }
+    input[type=range] { height: 8px; border-radius: 4px; background: linear-gradient(90deg, #ff4757, #ffa502, #2ed573, #7c5ce7, #4da6ff); }
+
+    .setup-buttons { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .setup-btn {
+      padding: 6px 10px; font-size: 0.7rem; background: #1e2a38;
+      border: 1px solid var(--border); color: #ccc; border-radius: 6px; cursor: pointer;
+    }
+    .setup-btn.added { background: #1a3a2a; border-color: #2ed573; color: #a0ffc0; }
+
+    .graph-container { background: #0d1117; border-top: 2px solid var(--border); padding: 12px; }
+    canvas#barCanvas { width: 100%; height: 150px; background: #0d1117; border-radius: 8px; }
+    .data-section { background: #0d1117; border-top: 1px solid var(--border); max-height: 140px; overflow-y: auto; font-size: 0.7rem; }
+    table { width: 100%; border-collapse: collapse; color: #aaa; }
+    th, td { padding: 4px 6px; border-bottom: 1px solid #1e2a38; text-align: center; }
+    th { background: #141b22; position: sticky; top: 0; }
+
+    .quiz-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9); z-index: 200; justify-content: center; align-items: center; flex-direction: column; padding: 20px;
+    }
+    .quiz-card {
+      background: #1a2332; border: 2px solid var(--border); border-radius: 20px; padding: 30px;
+      max-width: 650px; width: 100%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+    .quiz-card h2 { color: #fff; margin-bottom: 20px; }
+    .question { margin: 14px 0; padding: 12px; background: #0f1923; border-radius: 10px; }
+    .question p { font-weight: 600; margin-bottom: 8px; }
+    .options label { display: block; margin: 4px 0; font-weight: 400; cursor: pointer; }
+    .quiz-result { margin-top: 20px; font-weight: 700; font-size: 1.2rem; text-align: center; }
+    .btn.submit-quiz { background: #4da6ff; color: #000; border: none; font-weight: 700; margin-top: 16px; }
+    .disabled { opacity: 0.5; pointer-events: none; }
+    .titrant-info { background: #1a2d2a; border: 1px solid #2ed573; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; color: #a0ffc0; margin-top: 8px; }
+  </style>
+</head>
+<body>
+<div class="header">
+  <span class="logo">🔬 ChemLab 3D · Realistic Titration</span>
+  <div class="nav-buttons">
+    <button class="btn quiz-btn" id="openQuizBtn">📝 Quiz</button>
+    <button class="btn sound-btn active-btn" id="soundBtn">🔊 Sound</button>
+    <button class="btn record-btn" id="recordBtn">📝 Record</button>
+    <button class="btn download-btn" id="downloadBtn">📥 CSV</button>
+    <button class="btn reset-btn" id="resetBtn">🔄 Reset</button>
+  </div>
+</div>
+
+<div id="simulationArea" class="main-container">
+  <div class="scene-panel" id="sceneContainer">
+    <div class="ph-display"><div class="ph-value" id="phDisplay3D">7.00</div><div class="ph-label">pH</div></div>
+    <div style="position:absolute;bottom:10px;left:50%;transform:translateX(-50%);color:#556677;font-size:0.7rem;">🖱 Drag to rotate | Scroll zoom</div>
+  </div>
+  <div class="control-panel">
+    <div class="control-group">
+      <h3>🧪 Apparatus Setup</h3>
+      <p style="font-size:0.7rem;color:#889;">Click to add essential equipment to the lab bench.</p>
+      <div class="setup-buttons" id="setupButtons">
+        <button class="setup-btn" data-item="flask">⚗️ Conical Flask</button>
+        <button class="setup-btn" data-item="stand">🧲 Retort Stand</button>
+        <button class="setup-btn" data-item="burette">💧 Burette</button>
+        <button class="setup-btn" data-item="pipette">📏 Pipette</button>
+        <button class="setup-btn" data-item="whiteTile">⬜ White Tile</button>
+      </div>
+      <button class="btn" id="startExperimentBtn" style="width:100%;margin-top:8px;" disabled>🚀 Start Experiment</button>
+    </div>
+    <div id="experimentControls" class="disabled">
+      <div class="control-group">
+        <h3>🧪 Acid (in flask)</h3>
+        <label>Acid <span id="acidFormula">HCl</span></label>
+        <select id="acidSelect"><option value="HCl">HCl</option><option value="H2SO4">H₂SO₄</option><option value="CH3COOH">CH₃COOH</option></select>
+        <label>Volume (mL) <span id="acidVolVal">25.0</span></label>
+        <input type="range" id="acidVolume" min="5" max="50" value="25" step="0.5">
+        <label>Concentration (M) <span id="acidConcVal">0.10</span></label>
+        <input type="range" id="acidConc" min="0.05" max="1.0" value="0.1" step="0.01">
+      </div>
+      <div class="control-group">
+        <h3>🧴 Base (in burette)</h3>
+        <label>Base <span id="baseFormula">NaOH</span></label>
+        <select id="baseSelect"><option value="NaOH">NaOH</option><option value="KOH">KOH</option><option value="NH4OH">NH₄OH</option></select>
+        <label>Burette delivered (mL) <span id="baseVolVal">0.0</span></label>
+        <input type="range" id="baseVolume" min="0" max="50" value="0" step="0.1">
+        <label>Concentration (M) <span id="baseConcVal">0.10</span></label>
+        <input type="range" id="baseConc" min="0.05" max="1.0" value="0.1" step="0.01">
+      </div>
+      <div class="control-group">
+        <h3>⚡ Catalyst & Indicator</h3>
+        <label>Catalyst <span id="catalystVal">None</span></label>
+        <input type="range" id="catalyst" min="0" max="3" value="0" step="0.1">
+        <select id="indicatorSelect" style="margin-top:6px;">
+          <option value="phenolphthalein">Phenolphthalein</option>
+          <option value="litmus">Litmus</option>
+          <option value="methyl-orange">Methyl Orange</option>
+          <option value="bromothymol">Bromothymol Blue</option>
+          <option value="universal">Universal Indicator</option>
+        </select>
+      </div>
+      <div class="titrant-info" id="titrantInfo">⚖️ Equivalence point: not yet reached</div>
+    </div>
+  </div>
+</div>
+
+<div class="graph-container"><canvas id="barCanvas"></canvas></div>
+<div class="data-section"><table><thead><tr><th>#</th><th>Time</th><th>Acid</th><th>Base</th><th>pH</th><th>Water%</th><th>Salt%</th></tr></thead><tbody id="dataBody"><tr><td colspan="7">No records yet.</td></tr></tbody></table></div>
+
+<div class="quiz-overlay" id="quizOverlay">
+  <div class="quiz-card">
+    <h2>🧪 Acid–Base Mastery Quiz</h2>
+    <div id="quizQuestions"></div>
+    <button class="btn submit-quiz" id="submitQuiz">✅ Submit Answers</button>
+    <div class="quiz-result" id="quizResult"></div>
+    <button class="btn back-sim" id="closeQuizBtn" style="margin-top:12px;">🔙 Back to Lab</button>
+  </div>
+</div>
+
+<script type="importmap">
+  { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// --- DOM ---
+const sceneContainer = document.getElementById('sceneContainer');
+const phDisplay = document.getElementById('phDisplay3D');
+const acidSelect = document.getElementById('acidSelect');
+const baseSelect = document.getElementById('baseSelect');
+const acidVolSlider = document.getElementById('acidVolume');
+const baseVolSlider = document.getElementById('baseVolume');
+const acidConcSlider = document.getElementById('acidConc');
+const baseConcSlider = document.getElementById('baseConc');
+const catalystSlider = document.getElementById('catalyst');
+const indicatorSelect = document.getElementById('indicatorSelect');
+const experimentControls = document.getElementById('experimentControls');
+const startBtn = document.getElementById('startExperimentBtn');
+const setupButtons = document.querySelectorAll('.setup-btn');
+const titrantInfo = document.getElementById('titrantInfo');
+const soundBtn = document.getElementById('soundBtn');
+let soundEnabled = true;
+
+// --- State ---
+let addedItems = { flask: false, stand: false, burette: false, pipette: false, whiteTile: false };
+let experimentStarted = false;
+let recordedData = [];
+let recordCounter = 0;
+
+const acidData = {
+  'HCl': { protons:1, color:0xff6b7a },
+  'H2SO4': { protons:2, color:0xff4050 },
+  'CH3COOH': { protons:1, color:0xff8899 }
+};
+const baseData = {
+  'NaOH': { hydroxides:1, color:0x9b7eff },
+  'KOH': { hydroxides:1, color:0x8b6ef0 },
+  'NH4OH': { hydroxides:1, color:0xa890ff }
+};
+
+function getState() {
+  const acidVol = parseFloat(acidVolSlider.value)/1000;
+  const baseVol = parseFloat(baseVolSlider.value)/1000;
+  const acidConc = parseFloat(acidConcSlider.value);
+  const baseConc = parseFloat(baseConcSlider.value);
+  const acid = acidData[acidSelect.value];
+  const base = baseData[baseSelect.value];
+  const acidMoles = acidVol * acidConc * acid.protons;
+  const baseMoles = baseVol * baseConc * base.hydroxides;
+  const totalVol = acidVol + baseVol || 0.001;
+  const netH = acidMoles - baseMoles;
+  const hConc = Math.max(netH / totalVol, 1e-14);
+  const ohConc = 1e-14 / hConc;
+  let pH = -Math.log10(hConc);
+  pH = Math.max(0, Math.min(14, pH));
+  const waterYield = (Math.min(acidMoles, baseMoles) / Math.max(acidMoles, baseMoles, 0.0001)) * 100;
+  return { pH, waterYield, saltYield: waterYield, hConc, ohConc, acidVol: acidVol*1000, baseVol: baseVol*1000 };
+}
+
+// --- 3D Scene: Realistic Laboratory ---
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1e28);
+scene.fog = new THREE.Fog(0x1a1e28, 8, 25);
+
+const camera = new THREE.PerspectiveCamera(45, sceneContainer.clientWidth/sceneContainer.clientHeight, 0.5, 50);
+camera.position.set(3.5, 2.8, 6.5);
+camera.lookAt(0, 1.2, 0);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(sceneContainer.clientWidth, sceneContainer.clientHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+sceneContainer.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1.2, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 3;
+controls.maxDistance = 12;
+controls.maxPolarAngle = Math.PI/2.2;
+controls.update();
+
+// Lighting
+const ambient = new THREE.AmbientLight(0x8899bb, 1.2);
+scene.add(ambient);
+const sun = new THREE.DirectionalLight(0xfff5e6, 4);
+sun.position.set(4, 6, 2);
+sun.castShadow = true;
+sun.shadow.mapSize.width = 1024; sun.shadow.mapSize.height = 1024;
+sun.shadow.camera.near = 0.5; sun.shadow.camera.far = 30;
+sun.shadow.camera.left = -8; sun.shadow.camera.right = 8;
+sun.shadow.camera.top = 8; sun.shadow.camera.bottom = -5;
+scene.add(sun);
+const fillLight = new THREE.DirectionalLight(0xccddff, 1.8);
+fillLight.position.set(-2, 1, -1);
+scene.add(fillLight);
+
+// --- Laboratory Room ---
+function createRoom() {
+  const room = new THREE.Group();
+  // Floor – tiled
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x3a3a4a, roughness: 0.7 });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), floorMat);
+  floor.rotation.x = -Math.PI/2;
+  floor.position.y = -0.2;
+  floor.receiveShadow = true;
+  room.add(floor);
+  // Tile grid lines
+  const gridHelper = new THREE.PolarGridHelper(5, 16, 8, 64, 0x444455, 0x333344);
+  gridHelper.position.y = -0.18;
+  room.add(gridHelper);
+  // Walls
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xd8d0c8, roughness: 0.9 });
+  const backWall = new THREE.Mesh(new THREE.PlaneGeometry(8, 5), wallMat);
+  backWall.position.set(0, 2.3, -3.2);
+  backWall.receiveShadow = true;
+  room.add(backWall);
+  const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(6, 5), wallMat);
+  leftWall.position.set(-3.5, 2.3, 0);
+  leftWall.rotation.y = Math.PI/2;
+  leftWall.receiveShadow = true;
+  room.add(leftWall);
+  const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(6, 5), wallMat);
+  rightWall.position.set(3.5, 2.3, 0);
+  rightWall.rotation.y = -Math.PI/2;
+  rightWall.receiveShadow = true;
+  room.add(rightWall);
+  // Ceiling
+  const ceilingMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0 });
+  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(8, 6), ceilingMat);
+  ceiling.position.set(0, 4.7, 0);
+  ceiling.rotation.x = Math.PI/2;
+  room.add(ceiling);
+  // Window
+  const windowFrame = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.5), new THREE.MeshStandardMaterial({ color: 0x8899aa, roughness:0.3 }));
+  windowFrame.position.set(0, 2.6, -3.19);
+  room.add(windowFrame);
+  const windowLight = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.3), new THREE.MeshBasicMaterial({ color: 0xd4e6ff }));
+  windowLight.position.set(0, 2.6, -3.18);
+  room.add(windowLight);
+  // Sink
+  const sinkBase = new THREE.Mesh(new THREE.BoxGeometry(1, 0.2, 0.7), new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness:0.2 }));
+  sinkBase.position.set(2.5, 0.5, -2);
+  sinkBase.castShadow = true; sinkBase.receiveShadow = true;
+  room.add(sinkBase);
+  const sinkBasin = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.3, 0.15, 16), new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness:0.1 }));
+  sinkBasin.position.set(2.5, 0.65, -2);
+  room.add(sinkBasin);
+  // Shelves on back wall
+  const shelfMat = new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness:0.8 });
+  for (let i=0; i<3; i++) {
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.4), shelfMat);
+    shelf.position.set(-2.2, 1.3 + i*0.8, -2.8);
+    shelf.castShadow = true; shelf.receiveShadow = true;
+    room.add(shelf);
+  }
+  return room;
+}
+const labRoom = createRoom();
+scene.add(labRoom);
+
+// --- Lab Bench ---
+const benchGroup = new THREE.Group();
+const benchTop = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.1, 1.5), new THREE.MeshStandardMaterial({ color: 0x4a4a5a, roughness:0.5, metalness:0.3 }));
+benchTop.position.y = 1.05;
+benchTop.castShadow = true; benchTop.receiveShadow = true;
+benchGroup.add(benchTop);
+const benchLegs = [
+  [-1.3,0.5,-0.65], [1.3,0.5,-0.65], [-1.3,0.5,0.65], [1.3,0.5,0.65]
+];
+benchLegs.forEach(pos => {
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,1.0), new THREE.MeshStandardMaterial({ color: 0x666677, roughness:0.5 }));
+  leg.position.set(pos[0], pos[1], pos[2]);
+  leg.castShadow = true; leg.receiveShadow = true;
+  benchGroup.add(leg);
+});
+benchGroup.position.set(0, 0, -0.2);
+scene.add(benchGroup);
+
+// --- Apparatus Models ---
+const apparatusGroup = new THREE.Group();
+scene.add(apparatusGroup);
+
+function createFlaskModel() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.9, 32), new THREE.MeshPhysicalMaterial({ color:0xffffff, roughness:0.08, transparent:true, opacity:0.45, clearcoat:0.2 }));
+  body.position.y = 0.45;
+  g.add(body);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,0.4), new THREE.MeshStandardMaterial({ color:0xdddddd, roughness:0.1, transparent:true, opacity:0.6 }));
+  neck.position.y = 0.95;
+  g.add(neck);
+  return g;
+}
+function createStandModel() {
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.3,0.1,16), new THREE.MeshStandardMaterial({ color:0x333344, roughness:0.3, metalness:0.7 }));
+  base.position.y = 0.05;
+  g.add(base);
+  const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,2.4), new THREE.MeshStandardMaterial({ color:0x555566, roughness:0.2, metalness:0.8 }));
+  rod.position.y = 1.25;
+  g.add(rod);
+  return g;
+}
+function createBuretteModel() {
+  const g = new THREE.Group();
+  const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,2.0), new THREE.MeshPhysicalMaterial({ color:0xffffff, roughness:0.05, transparent:true, opacity:0.55 }));
+  tube.position.y = 1.0;
+  g.add(tube);
+  const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.04,0.2), new THREE.MeshStandardMaterial({ color:0xcccccc, roughness:0.1 }));
+  tip.position.y = 0.0;
+  g.add(tip);
+  const stopcock = new THREE.Mesh(new THREE.SphereGeometry(0.05), new THREE.MeshStandardMaterial({ color:0x888888, roughness:0.2 }));
+  stopcock.position.set(0,0.25,0.06);
+  g.add(stopcock);
+  return g;
+}
+function createPipetteModel() {
+  const g = new THREE.Group();
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.12), new THREE.MeshStandardMaterial({ color:0xdd8844, roughness:0.3 }));
+  bulb.position.y = 1.5;
+  g.add(bulb);
+  const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,1.8), new THREE.MeshStandardMaterial({ color:0xdddddd, roughness:0.1 }));
+  tube.position.y = 0.9;
+  g.add(tube);
+  return g;
+}
+function createWhiteTile() {
+  const tile = new THREE.Mesh(new THREE.PlaneGeometry(0.7,0.7), new THREE.MeshStandardMaterial({ color:0xf8f8f8, roughness:0.2 }));
+  tile.rotation.x = -Math.PI/2;
+  tile.position.y = 0.05;
+  return tile;
+}
+
+const models = {
+  flask: createFlaskModel(),
+  stand: createStandModel(),
+  burette: createBuretteModel(),
+  pipette: createPipetteModel(),
+  whiteTile: createWhiteTile()
+};
+Object.values(models).forEach(m => m.visible = false);
+apparatusGroup.add(...Object.values(models));
+
+// Position apparatus on bench
+function positionApparatus() {
+  const benchY = 1.1;
+  if (addedItems.flask) {
+    models.flask.position.set(-0.5, benchY, 0.2);
+    models.flask.visible = true;
+  } else models.flask.visible = false;
+  if (addedItems.stand) {
+    models.stand.position.set(0.7, benchY, 0.1);
+    models.stand.visible = true;
+  } else models.stand.visible = false;
+  if (addedItems.burette && addedItems.stand) {
+    models.burette.position.copy(models.stand.position).add(new THREE.Vector3(0, 1.7, -0.1));
+    models.burette.visible = true;
+    // add clamp (visual)
+    if (!models.clamp) {
+      const clampGeo = new THREE.BoxGeometry(0.15,0.08,0.1);
+      const clampMat = new THREE.MeshStandardMaterial({ color:0x555566 });
+      models.clamp = new THREE.Mesh(clampGeo, clampMat);
+      apparatusGroup.add(models.clamp);
+    }
+    models.clamp.position.copy(models.stand.position).add(new THREE.Vector3(0,1.55,0));
+    models.clamp.visible = true;
+  } else {
+    models.burette.visible = false;
+    if (models.clamp) models.clamp.visible = false;
+  }
+  if (addedItems.pipette) {
+    models.pipette.position.set(-0.9, benchY+0.3, -0.2);
+    models.pipette.visible = true;
+  } else models.pipette.visible = false;
+  if (addedItems.whiteTile) {
+    models.whiteTile.position.set(-0.5, benchY+0.01, 0.2);
+    models.whiteTile.visible = true;
+  } else models.whiteTile.visible = false;
+}
+
+// --- Liquid in flask ---
+const liquidGroup = new THREE.Group();
+apparatusGroup.add(liquidGroup);
+let liquidMesh;
+function updateLiquid(vol, pH, indicator) {
+  if(liquidMesh) liquidGroup.remove(liquidMesh);
+  if (!addedItems.flask || !experimentStarted) return;
+  const h = Math.min(0.08 + vol*0.05, 0.8);
+  const geo = new THREE.CylinderGeometry(0.38, 0.42, h, 20);
+  const color = getIndicatorColor(pH, indicator);
+  const mat = new THREE.MeshPhysicalMaterial({ color, roughness:0.2, transparent:true, opacity:0.7 });
+  liquidMesh = new THREE.Mesh(geo, mat);
+  liquidMesh.position.copy(models.flask.position).add(new THREE.Vector3(0, 0.1 + h/2, 0));
+  liquidGroup.add(liquidMesh);
+}
+function getIndicatorColor(pH, ind) {
+  if(ind==='phenolphthalein') return pH<8.2?0xf8e8f8:0xff3399;
+  if(ind==='litmus') return pH<4.5?0xff4444:pH>8.3?0x4466ff:0xd4c4b8;
+  if(ind==='methyl-orange') return pH<3.1?0xff3333:pH>4.4?0xffaa33:0xff8833;
+  if(ind==='bromothymol') return pH<6?0xffff44:pH>7.6?0x2244ff:0x44aa66;
+  if(pH<3)return 0xff0000; if(pH<5)return 0xff7700; if(pH<7)return 0xffff00; if(pH<=8)return 0x88cc00; return 0x0066ff;
+}
+
+// --- UI updates ---
+function updateUI() {
+  const st = getState();
+  phDisplay.textContent = st.pH.toFixed(2);
+  phDisplay.style.color = st.pH<3?'#ff4757':st.pH<6?'#ffa502':st.pH<=8?'#2ed573':st.pH<11?'#7c5ce7':'#cc44ff';
+  document.getElementById('acidVolVal').textContent = parseFloat(acidVolSlider.value).toFixed(1);
+  document.getElementById('baseVolVal').textContent = parseFloat(baseVolSlider.value).toFixed(1);
+  document.getElementById('acidConcVal').textContent = parseFloat(acidConcSlider.value).toFixed(2);
+  document.getElementById('baseConcVal').textContent = parseFloat(baseConcSlider.value).toFixed(2);
+  document.getElementById('catalystVal').textContent = parseFloat(catalystSlider.value).toFixed(1);
+  document.getElementById('acidFormula').textContent = acidSelect.value;
+  document.getElementById('baseFormula').textContent = baseSelect.value;
+  if(experimentStarted) {
+    const eqVol = (parseFloat(acidVolSlider.value)*parseFloat(acidConcSlider.value)*acidData[acidSelect.value].protons) / (parseFloat(baseConcSlider.value)*baseData[baseSelect.value].hydroxides);
+    const delivered = parseFloat(baseVolSlider.value);
+    if(Math.abs(st.pH-7)<0.3) titrantInfo.innerHTML = `✅ Equivalence reached! Titrant ≈ ${delivered.toFixed(1)} mL`;
+    else titrantInfo.innerHTML = `⚖️ Equiv. vol ~ ${eqVol.toFixed(1)} mL | delivered ${delivered.toFixed(1)} mL`;
+  }
+  drawBarGraph(st);
+}
+
+function drawBarGraph(st) {
+  const canvas = document.getElementById('barCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.parentElement.clientWidth-40;
+  canvas.height = 150;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#0d1117'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  const items = [
+    {label:'pH',val:st.pH,max:14,color:'#ff4757'},
+    {label:'[H⁺]',val:-Math.log10(st.hConc),max:14,color:'#ffa502'},
+    {label:'[OH⁻]',val:-Math.log10(st.ohConc),max:14,color:'#7c5ce7'},
+    {label:'H₂O%',val:st.waterYield,max:100,color:'#2ed573'},
+    {label:'Salt%',val:st.saltYield,max:100,color:'#4da6ff'}
+  ];
+  const w = (canvas.width-60)/items.length-10;
+  items.forEach((d,i)=>{
+    const x=40+i*(w+12), h=(d.val/d.max)*(canvas.height-40);
+    ctx.fillStyle=d.color; ctx.fillRect(x,canvas.height-30-h,w,h);
+    ctx.fillStyle='#fff'; ctx.font='bold 9px sans-serif'; ctx.fillText(d.val.toFixed(1),x+w/2-10,canvas.height-30-h-4);
+    ctx.fillStyle='#889'; ctx.fillText(d.label,x+w/2-12,canvas.height-10);
+  });
+}
+
+// --- Setup interaction ---
+setupButtons.forEach(btn => {
+  btn.addEventListener('click', ()=>{
+    const item = btn.dataset.item;
+    addedItems[item] = !addedItems[item];
+    btn.classList.toggle('added', addedItems[item]);
+    positionApparatus();
+    checkStartReady();
+  });
+});
+function checkStartReady() {
+  const needed = addedItems.flask && addedItems.stand && addedItems.burette;
+  startBtn.disabled = !needed;
+}
+startBtn.addEventListener('click', ()=>{
+  experimentStarted = true;
+  experimentControls.classList.remove('disabled');
+  startBtn.textContent = '✅ Experiment Running';
+  startBtn.disabled = true;
+  updateUI();
+});
+
+// --- Sliders ---
+[acidVolSlider,baseVolSlider,acidConcSlider,baseConcSlider,catalystSlider,acidSelect,baseSelect,indicatorSelect].forEach(el=>{
+  el.addEventListener('input', ()=>{ if(experimentStarted) updateUI(); });
+  el.addEventListener('change', ()=>{ if(experimentStarted) updateUI(); });
+});
+
+// --- Record, Download, Sound ---
+document.getElementById('recordBtn').addEventListener('click',()=>{
+  if(!experimentStarted) return;
+  const st = getState();
+  recordCounter++;
+  recordedData.push({id:recordCounter, time:new Date().toLocaleTimeString(), acid:acidSelect.value, base:baseSelect.value, pH:st.pH.toFixed(2), water:st.waterYield.toFixed(1), salt:st.saltYield.toFixed(1)});
+  updateTable();
+});
+function updateTable(){
+  const tbody = document.getElementById('dataBody');
+  if(recordedData.length===0){ tbody.innerHTML='<tr><td colspan="7">No records yet.</td></tr>'; return; }
+  tbody.innerHTML = recordedData.map(r=>`<tr><td>${r.id}</td><td>${r.time}</td><td>${r.acid}</td><td>${r.base}</td><td>${r.pH}</td><td>${r.water}%</td><td>${r.salt}%</td></tr>`).join('');
+}
+document.getElementById('downloadBtn').addEventListener('click',()=>{
+  if(recordedData.length===0) {alert('No records.'); return;}
+  let csv='ID,Time,Acid,Base,pH,Water%,Salt%\n';
+  recordedData.forEach(r=>csv+=`${r.id},"${r.time}",${r.acid},${r.base},${r.pH},${r.water},${r.salt}\n`);
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='titration_lab.csv'; a.click();
+});
+soundBtn.addEventListener('click',()=>{ soundEnabled=!soundEnabled; soundBtn.textContent=soundEnabled?'🔊 Sound':'🔇 Muted'; soundBtn.classList.toggle('active-btn',soundEnabled); });
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  acidVolSlider.value=25; baseVolSlider.value=0; acidConcSlider.value=0.1; baseConcSlider.value=0.1; catalystSlider.value=0;
+  experimentStarted=false; experimentControls.classList.add('disabled'); startBtn.disabled=false; startBtn.textContent='🚀 Start Experiment';
+  recordedData=[]; updateTable(); updateUI();
+});
+
+// --- Quiz ---
+const quizQuestions = [
+  {q:"What is the pH of a neutral solution at 25°C?", options:["0","7","14","1"], correct:1},
+  {q:"Which indicator is colourless in acid and pink in base?", options:["Litmus","Methyl orange","Phenolphthalein","Universal"], correct:2},
+  {q:"What is produced when an acid reacts with a base?", options:["Salt and hydrogen","Salt and water","Salt and oxygen","Water and carbon dioxide"], correct:1},
+  {q:"A solution with pH 3 is how many times more acidic than pH 5?", options:["2","10","100","1000"], correct:2},
+  {q:"What does a catalyst do in a neutralization reaction?", options:["Increases yield","Speeds up reaction","Changes pH","Changes indicator colour"], correct:1}
+];
+function buildQuiz(){
+  document.getElementById('quizQuestions').innerHTML = quizQuestions.map((q,i)=>`
+    <div class="question"><p>${i+1}. ${q.q}</p>
+      <div class="options">${q.options.map((opt,j)=>`<label><input type="radio" name="q${i}" value="${j}"> ${opt}</label>`).join('')}</div>
+    </div>`).join('');
+}
+buildQuiz();
+document.getElementById('submitQuiz').addEventListener('click',()=>{
+  let correct=0;
+  quizQuestions.forEach((q,i)=>{
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    if(selected && parseInt(selected.value)===q.correct) correct++;
+  });
+  const resultDiv = document.getElementById('quizResult');
+  if(correct===quizQuestions.length) resultDiv.innerHTML='🎉 Congratulations! You passed the quiz!';
+  else resultDiv.innerHTML=`❌ You got ${correct}/${quizQuestions.length}. Continue learning and try again.`;
+});
+document.getElementById('openQuizBtn').addEventListener('click',()=>{ document.getElementById('quizOverlay').style.display='flex'; });
+document.getElementById('closeQuizBtn').addEventListener('click',()=>{ document.getElementById('quizOverlay').style.display='none'; });
+
+// --- Animation loop ---
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  if(experimentStarted){
+    const st = getState();
+    updateLiquid(st.acidVol/25, st.pH, indicatorSelect.value);
+  }
+  renderer.render(scene, camera);
+}
+animate();
+window.addEventListener('resize',()=>{
+  camera.aspect = sceneContainer.clientWidth/sceneContainer.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(sceneContainer.clientWidth, sceneContainer.clientHeight);
+});
+</script>
+</body>
+</html>
