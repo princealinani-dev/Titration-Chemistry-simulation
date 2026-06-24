@@ -70,6 +70,7 @@
     .btn.record-btn { background: #2d1a1a; border-color: #ff4757; color: #ff6b7a; }
     .btn.download-btn { background: #1a2d1a; border-color: #2ed573; color: #5dff9e; }
     .btn.reset-btn { background: #2d251a; border-color: #ffa502; color: #ffbe4d; }
+    .btn.objectives-btn { background: #1a2d2d; border-color: #2ed573; color: #5dff9e; }
 
     .main-container {
       display: flex;
@@ -155,12 +156,48 @@
     .btn.submit-quiz { background: #4da6ff; color: #000; border: none; font-weight: 700; margin-top: 16px; }
     .disabled { opacity: 0.5; pointer-events: none; }
     .titrant-info { background: #1a2d2a; border: 1px solid #2ed573; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; color: #a0ffc0; margin-top: 8px; }
+
+    /* Learning Objectives Modal Styles */
+    .objectives-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9); z-index: 200; justify-content: center; align-items: center; flex-direction: column; padding: 20px;
+    }
+    .objectives-card {
+      background: #1a2332; border: 2px solid #2ed573; border-radius: 20px; padding: 30px;
+      max-width: 700px; width: 100%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+    .objectives-card h2 { color: #5dff9e; margin-bottom: 20px; font-size: 1.5rem; }
+    .objectives-list { display: flex; flex-direction: column; gap: 15px; }
+    .objective-item { background: #0f1923; border-left: 4px solid #2ed573; padding: 15px; border-radius: 8px; }
+    .objective-item strong { color: #5dff9e; font-size: 1.1rem; display: block; margin-bottom: 5px; }
+    .objective-item p { color: #ccc; font-size: 0.9rem; line-height: 1.5; }
+
+    /* Predict Outcome Section */
+    .predict-section {
+      background: var(--glass);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      margin-top: 8px;
+    }
+    .predict-section h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1.2px; color: #ffa502; margin-bottom: 8px; }
+    .predict-controls { display: flex; flex-direction: column; gap: 8px; }
+    .predict-input { width: 100%; padding: 8px; background: #1a2332; border: 1px solid #ffa502; border-radius: 6px; color: var(--text); font-size: 0.8rem; }
+    .predict-input::placeholder { color: #556677; }
+    .btn.predict-btn { background: #2d1a00; border-color: #ffa502; color: #ffbe4d; width: 100%; margin-top: 6px; }
+    .predict-result { background: #0f1923; padding: 10px; border-radius: 8px; margin-top: 8px; font-size: 0.75rem; color: #ccc; display: none; }
+    .predict-result.show { display: block; }
+    .predict-result.correct { border-left: 4px solid #2ed573; color: #5dff9e; }
+    .predict-result.incorrect { border-left: 4px solid #ff4757; color: #ff6b7a; }
+
+    .close-btn { background: #2d1a1a; border-color: #ff4757; color: #ff6b7a; }
   </style>
 </head>
 <body>
 <div class="header">
   <span class="logo">🔬 ChemLab 3D · Realistic Titration</span>
   <div class="nav-buttons">
+    <button class="btn objectives-btn" id="objectivesBtn">📚 Objectives</button>
     <button class="btn quiz-btn" id="openQuizBtn">📝 Quiz</button>
     <button class="btn sound-btn active-btn" id="soundBtn">🔊 Sound</button>
     <button class="btn record-btn" id="recordBtn">📝 Record</button>
@@ -219,6 +256,17 @@
         </select>
       </div>
       <div class="titrant-info" id="titrantInfo">⚖️ Equivalence point: not yet reached</div>
+
+      <!-- Predict the Outcome Section -->
+      <div class="predict-section" id="predictSection" style="display:none;">
+        <h3>🔮 Predict the Outcome</h3>
+        <div class="predict-controls">
+          <label for="predictInput">What pH do you expect at equivalence point?</label>
+          <input type="number" id="predictInput" class="predict-input" placeholder="Enter predicted pH (0-14)" min="0" max="14" step="0.1">
+          <button class="btn predict-btn" id="predictBtn">📊 Check Prediction</button>
+          <div class="predict-result" id="predictResult"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -226,13 +274,43 @@
 <div class="graph-container"><canvas id="barCanvas"></canvas></div>
 <div class="data-section"><table><thead><tr><th>#</th><th>Time</th><th>Acid</th><th>Base</th><th>pH</th><th>Water%</th><th>Salt%</th></tr></thead><tbody id="dataBody"><tr><td colspan="7">No records yet.</td></tr></tbody></table></div>
 
+<!-- Learning Objectives Modal -->
+<div class="objectives-overlay" id="objectivesOverlay">
+  <div class="objectives-card">
+    <h2>🎯 Learning Objectives</h2>
+    <div class="objectives-list">
+      <div class="objective-item">
+        <strong>1️⃣ Understand Acid-Base Neutralization</strong>
+        <p>Learn how acids and bases react to form salts and water. Understand that neutralization is an exothermic reaction where H⁺ ions from acids combine with OH⁻ ions from bases.</p>
+      </div>
+      <div class="objective-item">
+        <strong>2️⃣ Measure pH Changes Accurately</strong>
+        <p>Master the pH scale (0-14) and how to interpret pH values. Understand that each unit change represents a 10-fold change in H⁺ concentration, making precise measurement crucial in titrations.</p>
+      </div>
+      <div class="objective-item">
+        <strong>3️⃣ Calculate Equivalence Points</strong>
+        <p>Learn to determine the volume of titrant needed to neutralize an acid completely using stoichiometry. Understand how molarity, volume, and the number of protons/hydroxides affect the equivalence point calculation.</p>
+      </div>
+      <div class="objective-item">
+        <strong>4️⃣ Select and Interpret Indicators</strong>
+        <p>Discover how different indicators change color at different pH ranges. Learn to choose the appropriate indicator for your specific acid-base system to accurately detect the endpoint of titration.</p>
+      </div>
+      <div class="objective-item">
+        <strong>5️⃣ Apply Quantitative Analysis</strong>
+        <p>Develop skills to collect experimental data, analyze results, and draw meaningful conclusions. Use the recorded data to verify theoretical predictions and understand real-world applications of acid-base chemistry in industries like food and pharmaceuticals.</p>
+      </div>
+    </div>
+    <button class="btn close-btn" id="closeObjectivesBtn" style="width:100%;margin-top:20px;">🔙 Back to Lab</button>
+  </div>
+</div>
+
 <div class="quiz-overlay" id="quizOverlay">
   <div class="quiz-card">
     <h2>🧪 Acid–Base Mastery Quiz</h2>
     <div id="quizQuestions"></div>
     <button class="btn submit-quiz" id="submitQuiz">✅ Submit Answers</button>
     <div class="quiz-result" id="quizResult"></div>
-    <button class="btn back-sim" id="closeQuizBtn" style="margin-top:12px;">🔙 Back to Lab</button>
+    <button class="btn close-btn" id="closeQuizBtn" style="margin-top:12px;">🔙 Back to Lab</button>
   </div>
 </div>
 
@@ -260,6 +338,10 @@ const startBtn = document.getElementById('startExperimentBtn');
 const setupButtons = document.querySelectorAll('.setup-btn');
 const titrantInfo = document.getElementById('titrantInfo');
 const soundBtn = document.getElementById('soundBtn');
+const predictSection = document.getElementById('predictSection');
+const predictInput = document.getElementById('predictInput');
+const predictBtn = document.getElementById('predictBtn');
+const predictResult = document.getElementById('predictResult');
 let soundEnabled = true;
 
 // --- State ---
@@ -608,6 +690,7 @@ startBtn.addEventListener('click', ()=>{
   experimentControls.classList.remove('disabled');
   startBtn.textContent = '✅ Experiment Running';
   startBtn.disabled = true;
+  predictSection.style.display = 'block';
   updateUI();
 });
 
@@ -615,6 +698,30 @@ startBtn.addEventListener('click', ()=>{
 [acidVolSlider,baseVolSlider,acidConcSlider,baseConcSlider,catalystSlider,acidSelect,baseSelect,indicatorSelect].forEach(el=>{
   el.addEventListener('input', ()=>{ if(experimentStarted) updateUI(); });
   el.addEventListener('change', ()=>{ if(experimentStarted) updateUI(); });
+});
+
+// --- Predict the Outcome ---
+predictBtn.addEventListener('click', ()=>{
+  const predictedPH = parseFloat(predictInput.value);
+  if(isNaN(predictedPH) || predictedPH < 0 || predictedPH > 14) {
+    alert('Please enter a valid pH value between 0 and 14');
+    return;
+  }
+
+  const st = getState();
+  const tolerance = 0.5;
+  const isCorrect = Math.abs(st.pH - predictedPH) <= tolerance;
+
+  predictResult.classList.remove('show', 'correct', 'incorrect');
+  if(isCorrect) {
+    predictResult.classList.add('show', 'correct');
+    predictResult.innerHTML = `✅ <strong>Correct!</strong> Your prediction (${predictedPH}) is close to the actual pH (${st.pH.toFixed(2)}). Great understanding of acid-base chemistry!`;
+  } else {
+    predictResult.classList.add('show', 'incorrect');
+    const diff = st.pH - predictedPH;
+    const direction = diff > 0 ? 'more basic' : 'more acidic';
+    predictResult.innerHTML = `❌ <strong>Not quite.</strong> You predicted ${predictedPH}, but the actual pH is ${st.pH.toFixed(2)} (${Math.abs(diff).toFixed(2)} units ${direction}). Adjust your understanding and try again!`;
+  }
 });
 
 // --- Record, Download, Sound ---
@@ -641,8 +748,13 @@ soundBtn.addEventListener('click',()=>{ soundEnabled=!soundEnabled; soundBtn.tex
 document.getElementById('resetBtn').addEventListener('click',()=>{
   acidVolSlider.value=25; baseVolSlider.value=0; acidConcSlider.value=0.1; baseConcSlider.value=0.1; catalystSlider.value=0;
   experimentStarted=false; experimentControls.classList.add('disabled'); startBtn.disabled=false; startBtn.textContent='🚀 Start Experiment';
+  predictSection.style.display = 'none';
   recordedData=[]; updateTable(); updateUI();
 });
+
+// --- Learning Objectives Modal ---
+document.getElementById('objectivesBtn').addEventListener('click',()=>{ document.getElementById('objectivesOverlay').style.display='flex'; });
+document.getElementById('closeObjectivesBtn').addEventListener('click',()=>{ document.getElementById('objectivesOverlay').style.display='none'; });
 
 // --- Quiz ---
 const quizQuestions = [
